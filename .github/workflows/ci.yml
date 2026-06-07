@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Copy sample data for CI
+        run: |
+          mkdir -p data
+          # Generate minimal sample data for CI tests
+          python -c "
+          import pandas as pd
+          import numpy as np
+          np.random.seed(42)
+          n_train, n_test = 500, 100
+          cat_vals = {
+              'job': ['admin.', 'blue-collar', 'services', 'management', 'technician'],
+              'marital': ['single', 'married', 'divorced'],
+              'education': ['high.school', 'basic.9y', 'professional.course'],
+              'default': ['no', 'yes'],
+              'housing': ['yes', 'no'],
+              'loan': ['no', 'yes'],
+              'contact': ['cellular', 'telephone'],
+              'month': ['may', 'jul', 'aug', 'nov'],
+              'day_of_week': ['mon', 'tue', 'wed', 'thu', 'fri'],
+              'poutcome': ['success', 'nonexistent', 'failure'],
+          }
+          def make_df(n, has_subscribe=True):
+              d = {'id': range(1, n+1), 'age': np.random.randint(18, 80, n)}
+              for k, v in cat_vals.items():
+                  d[k] = np.random.choice(v, n)
+              d['duration'] = np.random.randint(10, 5000, n)
+              d['campaign'] = np.random.randint(0, 50, n)
+              d['pdays'] = np.random.randint(0, 1000, n)
+              d['previous'] = np.random.randint(0, 5, n)
+              d['emp_var_rate'] = np.random.choice([1.4, -1.8, 1.1, -0.1], n)
+              d['cons_price_index'] = np.random.uniform(89, 98, n)
+              d['cons_conf_index'] = np.random.uniform(-50, -30, n)
+              d['lending_rate3m'] = np.random.uniform(0.5, 5.5, n)
+              d['nr_employed'] = np.random.uniform(4700, 5400, n)
+              if has_subscribe:
+                  d['subscribe'] = np.random.choice(['yes', 'no'], n, p=[0.15, 0.85])
+              return pd.DataFrame(d)
+          make_df(n_train).to_csv('data/train.csv', index=False)
+          make_df(n_test, has_subscribe=False).to_csv('data/test.csv', index=False)
+          "
+
+      - name: Format check
+        run: ruff format --check .
+
+      - name: Lint check
+        run: ruff check .
+
+      - name: Run tests with coverage
+        run: pytest --cov=src --cov-report=term-missing --cov-fail-under=80 -v
+
+      - name: Build Docker image
+        run: docker build -t bank-marketing-app:latest .
