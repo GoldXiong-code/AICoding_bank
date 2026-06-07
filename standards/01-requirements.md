@@ -95,8 +95,8 @@
 以便 后续部署到在线预测系统中使用。
 
 验收标准:
-- AC1: Given 训练数据(train.csv,无标签)与测试数据(test.csv,有标签), When 运行训练脚本, Then 模型训练完成并输出到 `artifacts/model.pkl`。
-- AC2: Given 训练好的模型, When 在 test.csv 上评估, Then AUC ≥ 0.85。
+- AC1: Given `data/train.csv`(有标签)和 `data/test.csv`(无标签), When 运行训练脚本, Then 在 train.csv 上训练模型并输出到 `artifacts/model.pkl`。
+- AC2: Given 训练好的模型, When 在 train.csv 上用交叉验证评估, Then AUC ≥ 0.85。
 - AC3: Given 训练脚本执行完成, Then 打印出关键评估指标(AUC、F1、准确率、混淆矩阵)。
 - AC4: Given 相同的随机种子, When 重复运行训练脚本, Then 产出相同的模型(可复现)。
 
